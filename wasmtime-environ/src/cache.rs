@@ -39,11 +39,13 @@ lazy_static! {
                     .map_err(|_| warn!("Failed to get metadata of current executable"))
                     .ok()
             })
-            .map(|mtime| match mtime.duration_since(std::time::UNIX_EPOCH) {
-                Ok(duration) => format!("{}", duration.as_millis()),
-                Err(err) => format!("m{}", err.duration().as_millis()),
-            })
-            .unwrap_or_else(|| "no-mtime".to_string())
+            .map_or_else(
+                || "no-mtime".to_string(),
+                |mtime| match mtime.duration_since(std::time::UNIX_EPOCH) {
+                    Ok(duration) => format!("{}", duration.as_millis()),
+                    Err(err) => format!("m{}", err.duration().as_millis()),
+                },
+            )
     };
 }
 
@@ -118,10 +120,9 @@ impl<'config, 'worker> ModuleCacheEntry<'config, 'worker> {
 
     pub fn update_data(&self, data: &ModuleCacheData) {
         if let Some(inner) = &self.0 {
-            inner.update_data(data).map(|val| {
+            if inner.update_data(data).is_some() {
                 inner.worker.on_cache_update_async(&inner.mod_cache_path); // call on success
-                val
-            });
+            }
         }
     }
 }
@@ -235,7 +236,7 @@ impl ModuleCacheData {
         }
     }
 
-    pub fn to_tuple(self) -> ModuleCacheDataTupleType {
+    pub fn into_tuple(self) -> ModuleCacheDataTupleType {
         (
             self.compilation,
             self.relocations,

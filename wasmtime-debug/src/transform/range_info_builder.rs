@@ -74,7 +74,7 @@ impl RangeInfoBuilder {
             result.push((range.begin, range.end));
         }
 
-        Ok(if result.len() > 0 {
+        Ok(if !result.is_empty() {
             RangeInfoBuilder::Ranges(result)
         } else {
             RangeInfoBuilder::Undefined

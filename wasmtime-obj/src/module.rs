@@ -10,7 +10,7 @@ use wasmtime_environ::{Compilation, DataInitializer, Module, Relocations};
 fn emit_vmcontext_init(
     obj: &mut Artifact,
     module: &Module,
-    target_config: &TargetFrontendConfig,
+    target_config: TargetFrontendConfig,
 ) -> Result<(), String> {
     let (data, table_relocs) = layout_vmcontext(module, target_config);
     obj.declare_with("_vmcontext_init", Decl::data().global(), data.to_vec())
@@ -35,12 +35,12 @@ pub fn emit_module(
     compilation: &Compilation,
     relocations: &Relocations,
     data_initializers: &[DataInitializer],
-    target_config: &TargetFrontendConfig,
+    target_config: TargetFrontendConfig,
 ) -> Result<(), String> {
     declare_functions(obj, module, relocations)?;
 
-    for i in 0..data_initializers.len() {
-        declare_data_segment(obj, &data_initializers[i], i)?;
+    for (i, initializer) in data_initializers.iter().enumerate() {
+        declare_data_segment(obj, initializer, i)?;
     }
 
     for i in 0..module.table_plans.len() {
@@ -49,8 +49,8 @@ pub fn emit_module(
 
     emit_functions(obj, module, compilation, relocations)?;
 
-    for i in 0..data_initializers.len() {
-        emit_data_segment(obj, &data_initializers[i], i)?;
+    for (i, initializer) in data_initializers.iter().enumerate() {
+        emit_data_segment(obj, initializer, i)?;
     }
 
     for i in 0..module.table_plans.len() {

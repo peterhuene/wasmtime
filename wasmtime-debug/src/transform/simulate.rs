@@ -168,6 +168,7 @@ fn resolve_var_type(
     Some((type_die_id, is_param))
 }
 
+#[allow(clippy::too_many_arguments)]
 fn generate_vars(
     unit: &mut write::Unit,
     die_id: write::UnitEntryId,
@@ -248,6 +249,7 @@ fn generate_vars(
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn generate_simulated_dwarf(
     addr_tr: &AddressTransform,
     di: &DebugInfoData,

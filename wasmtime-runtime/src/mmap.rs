@@ -238,6 +238,11 @@ impl Mmap {
     pub fn len(&self) -> usize {
         self.len
     }
+
+    /// Returns true if the memory has not been allocated.
+    pub fn is_empty(&self) -> bool {
+        self.len == 0
+    }
 }
 
 impl Drop for Mmap {

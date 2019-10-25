@@ -80,14 +80,14 @@ pub struct AddressTransform {
 /// Returns a wasm bytecode offset in the code section from SourceLoc.
 pub fn get_wasm_code_offset(loc: SourceLoc, code_section_offset: u64) -> WasmAddress {
     // Code section size <= 4GB, allow wrapped SourceLoc to recover the overflow.
-    loc.bits().wrapping_sub(code_section_offset as u32) as WasmAddress
+    WasmAddress::from(loc.bits().wrapping_sub(code_section_offset as u32))
 }
 
 fn build_function_lookup(
     ft: &FunctionAddressMap,
     code_section_offset: u64,
 ) -> (WasmAddress, WasmAddress, FuncLookup) {
-    assert!(code_section_offset <= ft.start_srcloc.bits() as u64);
+    assert!(code_section_offset <= u64::from(ft.start_srcloc.bits()));
     let fn_start = get_wasm_code_offset(ft.start_srcloc, code_section_offset);
     let fn_end = get_wasm_code_offset(ft.end_srcloc, code_section_offset);
     assert!(fn_start <= fn_end);
@@ -155,11 +155,8 @@ fn build_function_lookup(
             active_ranges.push(range_index);
             continue;
         }
-        if last_wasm_pos.is_some() {
-            index.insert(
-                last_wasm_pos.unwrap(),
-                active_ranges.clone().into_boxed_slice(),
-            );
+        if let Some(last_wasm_pos) = last_wasm_pos {
+            index.insert(last_wasm_pos, active_ranges.clone().into_boxed_slice());
         }
         active_ranges.retain(|r| ranges[*r].wasm_end.cmp(&wasm_start) != core::cmp::Ordering::Less);
         active_ranges.push(range_index);

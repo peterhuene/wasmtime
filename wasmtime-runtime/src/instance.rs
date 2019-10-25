@@ -673,6 +673,7 @@ pub struct InstanceHandle {
 
 impl InstanceHandle {
     /// Create a new `InstanceHandle` pointing at a new `Instance`.
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         module: Rc<Module>,
         global_exports: Rc<RefCell<HashMap<String, Option<Export>>>>,

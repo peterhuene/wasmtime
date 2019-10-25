@@ -17,7 +17,7 @@ pub struct TableRelocation {
 
 pub fn layout_vmcontext(
     module: &Module,
-    target_config: &TargetFrontendConfig,
+    target_config: TargetFrontendConfig,
 ) -> (Box<[u8]>, Box<[TableRelocation]>) {
     let ofs = VMOffsets::new(target_config.pointer_bytes(), &module);
     let out_len = ofs.size_of_vmctx() as usize;

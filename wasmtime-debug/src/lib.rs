@@ -39,7 +39,7 @@ impl SymbolResolver for FunctionRelocResolver {
 pub fn emit_debugsections(
     obj: &mut Artifact,
     vmctx_info: &ModuleVmctxInfo,
-    target_config: &TargetFrontendConfig,
+    target_config: TargetFrontendConfig,
     debuginfo_data: &DebugInfoData,
     at: &ModuleAddressMap,
     ranges: &ValueLabelsRanges,
@@ -63,7 +63,7 @@ impl<'a> SymbolResolver for ImageRelocResolver<'a> {
 
 pub fn emit_debugsections_image(
     triple: Triple,
-    target_config: &TargetFrontendConfig,
+    target_config: TargetFrontendConfig,
     debuginfo_data: &DebugInfoData,
     vmctx_info: &ModuleVmctxInfo,
     at: &ModuleAddressMap,
@@ -79,7 +79,7 @@ pub fn emit_debugsections_image(
     let dwarf = transform_dwarf(target_config, debuginfo_data, at, vmctx_info, ranges)?;
 
     // Assuming all functions in the same code block, looking min/max of its range.
-    assert!(funcs.len() > 0);
+    assert!(!funcs.is_empty());
     let mut segment_body: (usize, usize) = (!0, 0);
     for (body_ptr, body_len) in funcs {
         segment_body.0 = ::core::cmp::min(segment_body.0, *body_ptr as usize);
@@ -141,7 +141,7 @@ fn convert_faerie_elf_to_loadable_file(bytes: &mut Vec<u8>, code_ptr: *const u8)
             CStr::from_ptr(
                 bytes
                     .as_ptr()
-                    .offset((shstrtab_off + sh_name_off as u64) as isize)
+                    .offset((shstrtab_off + u64::from(sh_name_off)) as isize)
                     as *const c_char,
             )
             .to_str()
@@ -163,7 +163,7 @@ fn convert_faerie_elf_to_loadable_file(bytes: &mut Vec<u8>, code_ptr: *const u8)
         // Fix name too: cut it to just ".text"
         unsafe {
             let sh_name_off = *(bytes.as_ptr().offset(off) as *const u32);
-            bytes[(shstrtab_off + sh_name_off as u64) as usize + ".text".len()] = 0;
+            bytes[(shstrtab_off + u64::from(sh_name_off)) as usize + ".text".len()] = 0;
         }
     }
 

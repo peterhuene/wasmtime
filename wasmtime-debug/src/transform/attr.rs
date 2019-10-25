@@ -34,6 +34,7 @@ fn is_exprloc_to_loclist_allowed(attr_name: gimli::constants::DwAt) -> bool {
     }
 }
 
+#[allow(clippy::cognitive_complexity, clippy::too_many_arguments)]
 pub(crate) fn clone_die_attributes<'a, R>(
     entry: &DebuggingInformationEntry<R>,
     context: &DebugInputContext<R>,
@@ -206,8 +207,8 @@ where
                                 }
                                 found_expr
                             };
-                            if found_single_expr.is_some() {
-                                write::AttributeValue::Exprloc(found_single_expr.unwrap())
+                            if let Some(found_single_expr) = found_single_expr {
+                                write::AttributeValue::Exprloc(found_single_expr)
                             } else if is_exprloc_to_loclist_allowed(attr.name()) {
                                 // Converting exprloc to loclist.
                                 let mut locs = Vec::new();

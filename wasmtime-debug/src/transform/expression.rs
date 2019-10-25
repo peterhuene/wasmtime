@@ -115,7 +115,9 @@ fn translate_loc(loc: ValueLoc, frame_info: Option<&FunctionFrameInfo>) -> Optio
                     writer
                         .write_u8(gimli::constants::DW_OP_breg0.0 + X86_64::RBP.0 as u8)
                         .expect("bp wr");
-                    writer.write_sleb128(ss_offset as i64 + 16).expect("ss wr");
+                    writer
+                        .write_sleb128(i64::from(ss_offset) + 16)
+                        .expect("ss wr");
                     writer
                         .write_u8(gimli::constants::DW_OP_deref.0 as u8)
                         .expect("bp wr");
@@ -146,7 +148,7 @@ fn append_memory_deref(
         ValueLoc::Stack(ss) => {
             if let Some(ss_offset) = frame_info.stack_slots[ss].offset {
                 writer.write_u8(gimli::constants::DW_OP_breg0.0 + X86_64::RBP.0 as u8)?;
-                writer.write_sleb128(ss_offset as i64 + 16)?;
+                writer.write_sleb128(i64::from(ss_offset) + 16)?;
                 writer.write_u8(gimli::constants::DW_OP_deref.0 as u8)?;
 
                 writer.write_u8(gimli::constants::DW_OP_consts.0 as u8)?;
@@ -318,7 +320,7 @@ where
             assert_eq!(ty, 0);
             let index = pc.read_sleb128()?;
             pc.read_u8()?; // consume 159
-            if code_chunk.len() > 0 {
+            if !code_chunk.is_empty() {
                 parts.push(CompiledExpressionPart::Code(code_chunk));
                 code_chunk = Vec::new();
             }
@@ -333,7 +335,7 @@ where
                     need_deref = false;
                 }
                 Operation::Deref { .. } => {
-                    if code_chunk.len() > 0 {
+                    if !code_chunk.is_empty() {
                         parts.push(CompiledExpressionPart::Code(code_chunk));
                         code_chunk = Vec::new();
                     }
@@ -348,14 +350,14 @@ where
         }
     }
 
-    if code_chunk.len() > 0 {
+    if !code_chunk.is_empty() {
         parts.push(CompiledExpressionPart::Code(code_chunk));
     }
 
     if base_len > 0 && base_len + 1 < parts.len() {
         // see if we can glue two code chunks
         if let [CompiledExpressionPart::Code(cc1), CompiledExpressionPart::Code(cc2)] =
-            &parts[base_len..base_len + 1]
+            &parts[base_len..=base_len]
         {
             let mut combined = cc1.clone();
             combined.extend_from_slice(cc2);
@@ -431,7 +433,7 @@ impl<'a, 'b> ValueLabelRangesBuilder<'a, 'b> {
                 // Find all native ranges for the value label ranges.
                 for (addr, len) in self
                     .addr_tr
-                    .translate_ranges(wasm_start as u64, wasm_end as u64)
+                    .translate_ranges(u64::from(wasm_start), u64::from(wasm_end))
                 {
                     let (range_start, range_end) = self.addr_tr.convert_to_code_range(addr, len);
                     if range_start == range_end {

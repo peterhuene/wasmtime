@@ -176,7 +176,7 @@ impl Compiler {
             };
             let bytes = emit_debugsections_image(
                 triple,
-                &target_config,
+                target_config,
                 &debug_data,
                 &module_vmctx_info,
                 &address_transform,

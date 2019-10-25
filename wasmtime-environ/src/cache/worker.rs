@@ -273,6 +273,7 @@ impl WorkerThread {
 
     /// Increases the usage counter and recompresses the file
     /// if the usage counter reached configurable treshold.
+    #[allow(clippy::option_map_unit_fn)]
     fn handle_on_cache_get(&self, path: PathBuf) {
         trace!("handle_on_cache_get() for path: {}", path.display());
 
@@ -324,7 +325,7 @@ impl WorkerThread {
                     "Failed to read old cache file, path: {}, err: {}",
                     path.display(),
                     err
-                )
+                );
             })
             .ok()
             .and_then(|compressed_cache_bytes| {
@@ -478,14 +479,16 @@ impl WorkerThread {
         let total_size_limit = self.cache_config.files_total_size_soft_limit();
         let file_count_limit = self.cache_config.file_count_soft_limit();
         let tsl_if_deleting = total_size_limit
-            .checked_mul(
+            .checked_mul(u64::from(
                 self.cache_config
-                    .files_total_size_limit_percent_if_deleting() as u64,
-            )
+                    .files_total_size_limit_percent_if_deleting(),
+            ))
             .unwrap()
             / 100;
         let fcl_if_deleting = file_count_limit
-            .checked_mul(self.cache_config.file_count_limit_percent_if_deleting() as u64)
+            .checked_mul(u64::from(
+                self.cache_config.file_count_limit_percent_if_deleting(),
+            ))
             .unwrap()
             / 100;
 
@@ -498,10 +501,10 @@ impl WorkerThread {
             };
 
             total_size += size;
-            if start_delete_idx_if_deleting_recognized_items.is_none() {
-                if total_size > tsl_if_deleting || (idx + 1) as u64 > fcl_if_deleting {
-                    start_delete_idx_if_deleting_recognized_items = Some(idx);
-                }
+            if start_delete_idx_if_deleting_recognized_items.is_none()
+                && (total_size > tsl_if_deleting || (idx + 1) as u64 > fcl_if_deleting)
+            {
+                start_delete_idx_if_deleting_recognized_items = Some(idx);
             }
 
             if total_size > total_size_limit || (idx + 1) as u64 > file_count_limit {
@@ -609,43 +612,48 @@ impl WorkerThread {
                 match (level, path.is_dir()) {
                     (0..=1, true) => enter_dir(vec, &path, level + 1, cache_config),
                     (0..=1, false) => {
-                        if level == 0 && path.file_stem() == Some(OsStr::new(".cleanup")) {
-                            if path.extension().is_some() {
-                                // assume it's cleanup lock
-                                if !is_fs_lock_expired(
-                                    Some(&entry),
-                                    &path,
-                                    cache_config.cleanup_interval(),
-                                    cache_config.allowed_clock_drift_for_files_from_future(),
-                                ) {
-                                    continue; // skip active lock
-                                }
-                            }
+                        if level == 0
+                            && path.file_stem() == Some(OsStr::new(".cleanup"))
+                            && path.extension().is_some()
+                            && !is_fs_lock_expired(
+                                Some(&entry),
+                                &path,
+                                cache_config.cleanup_interval(),
+                                cache_config.allowed_clock_drift_for_files_from_future(),
+                            )
+                        {
+                            continue; // skip active lock
                         }
                         add_unrecognized!(file: path);
                     }
                     (2, false) => {
-                        let ext = path.extension();
-                        if ext.is_none() || ext == Some(OsStr::new("stats")) {
-                            // mod or stats file
-                            cache_files.insert(path, entry);
-                        } else {
-                            let recognized = if let Some(ext_str) = ext.unwrap().to_str() {
-                                // check if valid lock
-                                ext_str.starts_with("wip-")
-                                    && !is_fs_lock_expired(
-                                        Some(&entry),
-                                        &path,
-                                        cache_config.optimizing_compression_task_timeout(),
-                                        cache_config.allowed_clock_drift_for_files_from_future(),
-                                    )
-                            } else {
-                                // if it's None, i.e. not valid UTF-8 string, then that's not our lock for sure
-                                false
-                            };
+                        match path.extension() {
+                            Some(ext) => {
+                                if ext == "stats" {
+                                    cache_files.insert(path, entry);
+                                } else {
+                                    let recognized = if let Some(ext_str) = ext.to_str() {
+                                        // check if valid lock
+                                        ext_str.starts_with("wip-")
+                                            && !is_fs_lock_expired(
+                                                Some(&entry),
+                                                &path,
+                                                cache_config.optimizing_compression_task_timeout(),
+                                                cache_config
+                                                    .allowed_clock_drift_for_files_from_future(),
+                                            )
+                                    } else {
+                                        // if it's None, i.e. not valid UTF-8 string, then that's not our lock for sure
+                                        false
+                                    };
 
-                            if !recognized {
-                                add_unrecognized!(file: path);
+                                    if !recognized {
+                                        add_unrecognized!(file: path);
+                                    }
+                                }
+                            }
+                            None => {
+                                cache_files.insert(path, entry);
                             }
                         }
                     }

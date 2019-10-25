@@ -62,6 +62,11 @@ impl Compilation {
         self.functions.len()
     }
 
+    /// Returns true if the compilation contains no functions.
+    pub fn is_empty(&self) -> bool {
+        self.functions.is_empty()
+    }
+
     /// Gets functions jump table offsets.
     pub fn get_jt_offsets(&self) -> PrimaryMap<DefinedFuncIndex, ir::JumpTableOffsets> {
         self.functions
@@ -162,6 +167,7 @@ pub enum CompileError {
 /// An implementation of a compiler from parsed WebAssembly module to native code.
 pub trait Compiler {
     /// Compile a parsed module with the given `TargetIsa`.
+    #[allow(clippy::type_complexity)]
     fn compile_module<'data, 'module>(
         module: &'module module::Module,
         module_translation: &ModuleTranslationState,

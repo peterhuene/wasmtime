@@ -82,7 +82,7 @@ pub fn emit_functions(
                     obj.link(Link {
                         from: &string_name,
                         to: &target_name,
-                        at: r.offset as u64,
+                        at: u64::from(r.offset),
                     })
                     .map_err(|err| format!("{}", err))?;
                 }
@@ -93,7 +93,7 @@ pub fn emit_functions(
                     obj.link(Link {
                         from: &string_name,
                         to: get_reloc_target_special_import_name(r.reloc_target).expect("name"),
-                        at: r.offset as u64,
+                        at: u64::from(r.offset),
                     })
                     .map_err(|err| format!("{}", err))?;
                 }

@@ -114,67 +114,64 @@ fn has_valid_code_range<R: Reader<Offset = usize>>(
     unit: &read::Unit<R>,
     at: &AddressTransform,
 ) -> read::Result<bool> {
-    match die.tag() {
-        constants::DW_TAG_subprogram => {
-            if let Some(ranges_attr) = die.attr_value(constants::DW_AT_ranges)? {
-                let offset = match ranges_attr {
-                    read::AttributeValue::RangeListsRef(val) => val,
-                    read::AttributeValue::DebugRngListsIndex(index) => {
-                        dwarf.ranges_offset(unit, index)?
-                    }
-                    _ => return Ok(false),
-                };
-                let mut has_valid_base = if let Some(read::AttributeValue::Addr(low_pc)) =
-                    die.attr_value(constants::DW_AT_low_pc)?
-                {
-                    Some(at.can_translate_address(low_pc))
-                } else {
-                    None
-                };
-                let mut it = dwarf.ranges.raw_ranges(offset, unit.encoding())?;
-                while let Some(range) = it.next()? {
-                    // If at least one of the range addresses can be converted,
-                    // declaring code range as valid.
-                    match range {
-                        read::RawRngListEntry::AddressOrOffsetPair { .. }
-                            if has_valid_base.is_some() =>
-                        {
-                            if has_valid_base.unwrap() {
-                                return Ok(true);
-                            }
-                        }
-                        read::RawRngListEntry::StartEnd { begin, .. }
-                        | read::RawRngListEntry::StartLength { begin, .. }
-                        | read::RawRngListEntry::AddressOrOffsetPair { begin, .. } => {
-                            if at.can_translate_address(begin) {
-                                return Ok(true);
-                            }
-                        }
-                        read::RawRngListEntry::StartxEndx { begin, .. }
-                        | read::RawRngListEntry::StartxLength { begin, .. } => {
-                            let addr = dwarf.address(unit, begin)?;
-                            if at.can_translate_address(addr) {
-                                return Ok(true);
-                            }
-                        }
-                        read::RawRngListEntry::BaseAddress { addr } => {
-                            has_valid_base = Some(at.can_translate_address(addr));
-                        }
-                        read::RawRngListEntry::BaseAddressx { addr } => {
-                            let addr = dwarf.address(unit, addr)?;
-                            has_valid_base = Some(at.can_translate_address(addr));
-                        }
-                        read::RawRngListEntry::OffsetPair { .. } => (),
-                    }
+    if let constants::DW_TAG_subprogram = die.tag() {
+        if let Some(ranges_attr) = die.attr_value(constants::DW_AT_ranges)? {
+            let offset = match ranges_attr {
+                read::AttributeValue::RangeListsRef(val) => val,
+                read::AttributeValue::DebugRngListsIndex(index) => {
+                    dwarf.ranges_offset(unit, index)?
                 }
-                return Ok(false);
-            } else if let Some(low_pc) = die.attr_value(constants::DW_AT_low_pc)? {
-                if let read::AttributeValue::Addr(a) = low_pc {
-                    return Ok(at.can_translate_address(a));
+                _ => return Ok(false),
+            };
+            let mut has_valid_base = if let Some(read::AttributeValue::Addr(low_pc)) =
+                die.attr_value(constants::DW_AT_low_pc)?
+            {
+                Some(at.can_translate_address(low_pc))
+            } else {
+                None
+            };
+            let mut it = dwarf.ranges.raw_ranges(offset, unit.encoding())?;
+            while let Some(range) = it.next()? {
+                // If at least one of the range addresses can be converted,
+                // declaring code range as valid.
+                match range {
+                    read::RawRngListEntry::AddressOrOffsetPair { .. }
+                        if has_valid_base.is_some() =>
+                    {
+                        if has_valid_base.unwrap() {
+                            return Ok(true);
+                        }
+                    }
+                    read::RawRngListEntry::StartEnd { begin, .. }
+                    | read::RawRngListEntry::StartLength { begin, .. }
+                    | read::RawRngListEntry::AddressOrOffsetPair { begin, .. } => {
+                        if at.can_translate_address(begin) {
+                            return Ok(true);
+                        }
+                    }
+                    read::RawRngListEntry::StartxEndx { begin, .. }
+                    | read::RawRngListEntry::StartxLength { begin, .. } => {
+                        let addr = dwarf.address(unit, begin)?;
+                        if at.can_translate_address(addr) {
+                            return Ok(true);
+                        }
+                    }
+                    read::RawRngListEntry::BaseAddress { addr } => {
+                        has_valid_base = Some(at.can_translate_address(addr));
+                    }
+                    read::RawRngListEntry::BaseAddressx { addr } => {
+                        let addr = dwarf.address(unit, addr)?;
+                        has_valid_base = Some(at.can_translate_address(addr));
+                    }
+                    read::RawRngListEntry::OffsetPair { .. } => (),
                 }
             }
+            return Ok(false);
+        } else if let Some(low_pc) = die.attr_value(constants::DW_AT_low_pc)? {
+            if let read::AttributeValue::Addr(a) = low_pc {
+                return Ok(at.can_translate_address(a));
+            }
         }
-        _ => (),
     }
     Ok(false)
 }

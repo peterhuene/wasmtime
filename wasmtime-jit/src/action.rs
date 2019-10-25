@@ -261,9 +261,7 @@ pub fn inspect_memory<'instance>(
 pub fn get(instance: &InstanceHandle, global_name: &str) -> Result<RuntimeValue, ActionError> {
     let (definition, global) = match unsafe { instance.lookup_immutable(global_name) } {
         Some(Export::Global {
-            definition,
-            vmctx: _,
-            global,
+            definition, global, ..
         }) => (definition, global),
         Some(_) => {
             return Err(ActionError::Kind(format!(
