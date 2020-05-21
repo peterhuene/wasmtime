@@ -2,6 +2,7 @@ use crate::entry::{Entry, EntryHandle};
 use crate::fdpool::FdPool;
 use crate::handle::Handle;
 use crate::sys::osdir::OsDir;
+use crate::sys::osfile::OsFile;
 use crate::sys::osother::{OsOther, OsOtherExt};
 use crate::sys::stdio::{Stderr, StderrExt, Stdin, StdinExt, Stdout, StdoutExt};
 use crate::virtfs::{VirtualDir, VirtualDirEntry};
@@ -369,8 +370,11 @@ impl WasiCtxBuilder {
                         .ok_or(WasiCtxBuilderError::TooManyFilesOpen)?
                 }
                 PendingEntry::OsHandle(f) => {
-                    let handle = OsOther::try_from(f)?;
-                    let handle = EntryHandle::new(handle);
+                    let handle = if f.metadata()?.is_file() {
+                        EntryHandle::new(OsFile::try_from(f)?)
+                    } else {
+                        EntryHandle::new(OsOther::try_from(f)?)
+                    };
                     let entry = Entry::new(handle);
                     entries
                         .insert(entry)
@@ -379,6 +383,7 @@ impl WasiCtxBuilder {
             };
             log::debug!("WasiCtx inserted at {:?}", fd);
         }
+
         // Then add the preopen entries.
         for (guest_path, preopen) in self.preopens.take().unwrap() {
             let handle = EntryHandle::from(preopen.into()?);
